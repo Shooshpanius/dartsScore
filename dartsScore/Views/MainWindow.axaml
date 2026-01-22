@@ -1,0 +1,215 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:dartsScore.ViewModels"
+        xmlns:views="using:dartsScore.Views"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="dartsScore.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        x:Name="MainWin"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="dartsScore">
+
+    <Design.DataContext>
+        <!-- This only sets the DataContext for the previewer in an IDE,
+             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <Window.Resources>
+        <views:BoolToBrushConverter x:Key="BoolToBrush" TrueBrush="LightGoldenrodYellow" FalseBrush="Transparent"/>
+        <views:BoolToBrushConverter x:Key="BoolToBrushGreen" TrueBrush="LightGreen" FalseBrush="Transparent"/>
+        <views:BoolToBrushConverter x:Key="AddButtonBrush" TrueBrush="LightGray" FalseBrush="LightGreen"/>
+        <views:BoolInverterConverter x:Key="InvertBool" />
+        <views:BoolToBrushMultiConverter x:Key="BoolToBrushMulti" />
+        <views:BoolToFontWeightConverter x:Key="BoolToFontWeight" />
+    </Window.Resources>
+
+    <TabControl>
+        <TabItem Header="Игра">
+            <Grid>
+                <Grid.Resources>
+                    <!-- BooleanToVisibilityConverter is not available by default in Avalonia XAML; use BoolInverterConverter instead where needed -->
+                </Grid.Resources>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="3*"/>
+                    <ColumnDefinition Width="2*"/>
+                </Grid.ColumnDefinitions>
+
+                <Grid Grid.Column="0" IsVisible="{Binding HasParticipants}">
+                    <!-- Разделяем область на строку для заголовка/информации, основную область для канваса мишени и строку под канвасом для номера сектора -->
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Канвас с мишенью располагается в средней строке -->
+                    <Canvas x:Name="DartsCanvas" Grid.Row="1" Background="White" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+
+                    <!-- Место под мишенью для отображения номера сектора / краткой информации -->
+                    <TextBlock x:Name="SectorNumberText" Grid.Row="2" Text="" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,6,0,0" FontWeight="Bold" FontSize="16" />
+                </Grid>
+
+                <Grid Grid.Column="1" Margin="10" IsVisible="{Binding HasParticipants}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Orientation="Horizontal" Grid.Row="0" VerticalAlignment="Center">
+                        <Button Click="UndoButton_Click" Margin="8,0,0,0" Width="120" HorizontalContentAlignment="Center" VerticalContentAlignment="Center">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Path Width="16" Height="16" Stretch="Uniform" Fill="Black" Margin="0,0,6,0" Data="M12 5V2L8 6l4 4V7c3.31 0 6 2.69 6 6 0 3.31-2.69 6-6 6-2.64 0-4.88-1.64-5.73-4H5.07c.9 3.32 3.98 5.82 7.92 5.82 4.42 0 8-3.58 8-8s-3.58-8-8-8z" />
+                                <TextBlock Text="Отмена" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Click="NextButton_Click" Margin="8,0,0,0" Width="120" HorizontalContentAlignment="Center" VerticalContentAlignment="Center">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock Text="Следующий" VerticalAlignment="Center"/>
+                                <Path Width="16" Height="16" Stretch="Uniform" Fill="Black" Margin="6,0,0,0" Data="M4,2 L12,8 L4,14 z" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+
+                    <!-- separator with 5px padding above and below (in its own row) -->
+                    <Separator Grid.Row="1" Margin="0,5,0,5" HorizontalAlignment="Stretch" />
+
+                    <!-- Combined round headers and results in one scroll viewer so they stay aligned -->
+                    <ScrollViewer Grid.Row="2" x:Name="RoundTableScroll" Background="White" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Orientation="Vertical" Background="White">
+                            <!-- header row: placeholder for name column + round headers -->
+                            <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                                <Border Background="Transparent"  Width="131" VerticalAlignment="Center" />
+                                <ItemsControl ItemsSource="{Binding RoundHeaders}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="LightGray" BorderThickness="1" Padding="6" Margin="2" MinWidth="36">
+                                            <Border.Background>
+                                                <Binding Path="BackgroundBrush" />
+                                            </Border.Background>
+                                            <TextBlock Text="{Binding Number}" HorizontalAlignment="Center"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+
+                            <!-- rows: participants with their round score cells (selectable) -->
+                            <ListBox ItemsSource="{Binding Participants}" SelectedItem="{Binding SelectedParticipant, Mode=TwoWay}" Background="White" BorderThickness="0">
+                                <ListBox.Styles>
+                                    <!-- Remove all default selection/hover/focus backgrounds so no blue highlight appears -->
+                                    <Style Selector="ListBoxItem">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                    </Style>
+                                    <Style Selector="ListBoxItem:selected">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                    </Style>
+                                    <Style Selector="ListBoxItem:focus">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                    </Style>
+                                    <Style Selector="ListBoxItem:pointerover">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                    </Style>
+                                    <Style Selector="ListBoxItem:pressed">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                    </Style>
+                                </ListBox.Styles>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Margin="0,2,0,2" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}" Width="120" VerticalAlignment="Center"/>
+                                            <ItemsControl ItemsSource="{Binding RoundScores}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border BorderBrush="LightGray" BorderThickness="1" Padding="2" Margin="2" MinWidth="36">
+                                                            <Border.Background>
+                                                                <Binding Path="BackgroundBrush"/>
+                                                            </Border.Background>
+                                                            <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                                                                <TextBlock FontWeight="Bold" FontSize="12" HorizontalAlignment="Center"
+                                                                           Text="{Binding DisplayTotal}"/>
+                                                                <TextBlock FontSize="11" HorizontalAlignment="Center" Text="{Binding Value}"/>
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <StackPanel Orientation="Horizontal"/>
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- Empty state when no participants -->
+                <Border Grid.ColumnSpan="2" Background="Transparent" IsVisible="{Binding HasParticipants, Converter={StaticResource InvertBool}}">
+                    <TextBlock Text="Перейдите в Настройки и добавьте игроков в игру" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" FontWeight="Bold" />
+                </Border>
+            </Grid>
+        </TabItem>
+        <TabItem Header="Настройки">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Players list -->
+                <ListBox Grid.Column="0" ItemsSource="{Binding Players}" SelectedItem="{Binding SelectedPlayerEntry, Mode=TwoWay}" Margin="10">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Border Padding="6" BorderBrush="LightGray" BorderThickness="1">
+                                <Border.Background>
+                                    <Binding Path="InGame" Converter="{StaticResource BoolToBrush}" />
+                                </Border.Background>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Orientation="Horizontal" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}" />
+                                        <TextBlock Text=" (in game)" Foreground="Gray" Margin="6,0,0,0" IsVisible="{Binding InGame}"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Content="Добавить в игру"
+                                            Command="{Binding AddToGameCommand}"
+                                            CommandParameter="{Binding Name}"
+                                            Margin="8,0,0,0" VerticalAlignment="Center"
+                                            HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                            Background="{Binding InGame, Converter={StaticResource AddButtonBrush}}"
+                                            IsEnabled="{Binding InGame, Converter={StaticResource InvertBool}}"/>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <!-- Controls to add/remove players -->
+                <StackPanel Grid.Column="1" Margin="10" VerticalAlignment="Top">
+                    <TextBox x:Name="NewPlayerNameTextBox" Text="{Binding NewPlayerName, Mode=TwoWay}" Width="200" Watermark="Введите имя"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0" HorizontalAlignment="Center">
+                        <Button Content="Добавить" Command="{Binding AddPlayerCommand}" Width="96" Background="LightGreen" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
+                        <Button Content="Удалить" Command="{Binding RemoveSelectedPlayerCommand}" Margin="8,0,0,0" Width="96" Background="LightCoral" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
+                    </StackPanel>
+                    <Separator Margin="0,12,0,12"/>
+                </StackPanel>
+            </Grid>
+        </TabItem>
+    </TabControl>
+
+</Window>
